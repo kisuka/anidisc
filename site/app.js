@@ -40,7 +40,9 @@ async function renderSearch(text) {
     ? idx.series.filter((s) => [s.title, s.originalTitle, ...(s.aliases ?? [])].some((t) => fold(t).includes(needle)))
     : idx.series;
   if (hits.length === 0) {
-    view.innerHTML = `<p class="muted">No series match “${esc(text)}”.</p>`;
+    view.innerHTML = needle
+      ? `<p class="muted">No series match “${esc(text)}”.</p>`
+      : `<p class="muted">No discs have been added yet.</p>`;
     return;
   }
   view.innerHTML = `<ul class="list">${hits.map((s) => `
