@@ -1,0 +1,32 @@
+[package]
+name = "anidisc"
+version = "0.1.0"
+edition = "2024"
+description = "Identify anime DVD/Blu-ray discs by content hash and organize them."
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "anidisc"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dependencies]
+clap = { version = "4.6.7", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+md-5 = "0.11.0"
+regex-lite = "0.1.9"
+roxmltree = "0.21.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ureq = "3.5.1"
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+ureq = { version = "3.5.1", default-features = false, features = ["native-tls-no-default", "gzip"] }

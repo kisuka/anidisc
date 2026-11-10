@@ -1,0 +1,106 @@
+name: CLI builds
+
+# Builds a single-file `anidisc` executable for each platform. Nothing needs to be installed to run it.
+#   - every push to main / pull request touching the code: binaries are attached to the workflow run
+#   - a pushed tag v1.2.3: binaries are published as GitHub Release v1.2.3, and are always at the
+#     stable links https://github.com/<owner>/<repo>/releases/latest/download/anidisc-<platform>.<zip|tar.gz>
+# (Path filters only apply to branch pushes; tag pushes always build.)
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore: ["data/**", "site/**", "**.md"]
+  pull_request:
+    paths-ignore: ["data/**", "site/**", "**.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: win-x64, os: windows-latest, target: x86_64-pc-windows-msvc, test: true }
+          - { name: win-arm64, os: windows-latest, target: aarch64-pc-windows-msvc }
+          - { name: osx-arm64, os: macos-latest, target: aarch64-apple-darwin, test: true }
+          - { name: osx-x64, os: macos-latest, target: x86_64-apple-darwin }
+          # Linux builds are static (musl), so they run on any distribution; zig cross-compiles the C in rustls' crypto.
+          - { name: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, zig: true, test: true }
+          - { name: linux-arm64, os: ubuntu-latest, target: aarch64-unknown-linux-musl, zig: true }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        shell: bash
+        run: rustup update stable --no-self-update && rustup default stable && rustup target add ${{ matrix.target }}
+
+      - name: Version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: echo "ANIDISC_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV" # shown by `anidisc --version`
+
+      - name: Build
+        if: ${{ !matrix.zig }}
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Build (zig)
+        if: ${{ matrix.zig }}
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zig"
+          "$RUNNER_TEMP/zig/bin/pip" install --quiet ziglang cargo-zigbuild
+          export PATH="$RUNNER_TEMP/zig/bin:$PATH"
+          cargo zigbuild --release --locked --target ${{ matrix.target }}
+
+      - name: Smoke test
+        if: ${{ matrix.test }}
+        shell: bash
+        run: |
+          bin=target/${{ matrix.target }}/release/anidisc
+          $bin --version
+          $bin validate --data data
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          name="anidisc-${{ matrix.name }}"
+          dir="target/${{ matrix.target }}/release"
+          if [[ "${{ matrix.name }}" == win-* ]]; then
+            7z a -tzip "$name.zip" "./$dir/anidisc.exe" > /dev/null
+            echo "file=$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$name.tar.gz" -C "$dir" anidisc
+            echo "file=$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l "$dir"/anidisc* "$name".*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anidisc-${{ matrix.name }}
+          path: ${{ steps.package.outputs.file }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum anidisc-* > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
