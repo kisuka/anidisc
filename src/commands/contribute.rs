@@ -291,7 +291,7 @@ fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::i
                 titles
                     .into_iter()
                     .map(|mut t| {
-                        t.kind = t.kind.or_else(blank);
+                        t.kind = t.kind.or_else(|| Some(Vec::new()));
                         t.episodes = t.episodes.or_else(|| Some(Vec::new()));
                         t
                     })

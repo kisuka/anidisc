@@ -173,9 +173,9 @@ fn run(f: &Files) -> Result<(), Failure> {
 }
 
 const KINDS: [&str; 5] = ["episode", "extra", "trailer", "menu", "other"];
-const NOT_SURE: &str = "not sure (leave blank)";
-const STOP_DISC: &str = "stop asking about this disc";
+const STOP_DISC: &str = "skip the rest of this disc";
 const STOP_ALL: &str = "stop asking about all discs";
+const GO_ON: &str = "no, go back to this title";
 
 fn ask_title(
     theme: &ColorfulTheme,
@@ -191,49 +191,59 @@ fn ask_title(
     };
     let seconds = t.duration.as_deref().map_or(0, seconds);
     let prompt = format!(
-        "{id} · {} · {} chapter(s): what is it?",
+        "{id} · {} · {} chapter(s): what's in it? (Space ticks each kind it holds, Enter confirms; none if unsure, Esc to stop)",
         t.duration.as_deref().unwrap_or("?"),
         t.chapters.unwrap_or(0)
     );
 
-    let mut items: Vec<&str> = KINDS.to_vec();
-    items.extend([NOT_SURE, STOP_DISC, STOP_ALL]);
-    let current = t
-        .kind
-        .as_deref()
-        .and_then(|k| KINDS.iter().position(|x| *x == k));
-    // A guess from the length: menus loop for seconds, episodes run for many minutes.
-    let guess = current.unwrap_or(match seconds {
-        0..=30 => 3,
-        600.. => 0,
-        _ => 5,
-    });
-    let choice = Select::with_theme(theme)
+    let current: Vec<String> = t.kind.clone().unwrap_or_default();
+    // Without an answer yet, a guess from the length: menus loop for seconds, episodes run for
+    // many minutes.
+    let ticked: Vec<bool> = KINDS
+        .iter()
+        .map(|k| {
+            if current.is_empty() {
+                match seconds {
+                    0..=30 => *k == "menu",
+                    600.. => *k == "episode",
+                    _ => false,
+                }
+            } else {
+                current.iter().any(|c| c == k)
+            }
+        })
+        .collect();
+    let Some(picked) = MultiSelect::with_theme(theme)
         .with_prompt(prompt)
-        .items(&items)
-        .default(guess)
+        .items(KINDS)
+        .defaults(&ticked)
         .interact_opt()?
-        .ok_or(Stop::Disc)?;
-    match items[choice] {
-        STOP_DISC => return Err(Stop::Disc.into()),
-        STOP_ALL => return Err(Stop::All.into()),
-        NOT_SURE => {
-            t.kind = Some(String::new());
-            return Ok(t);
-        }
-        kind => t.kind = Some(kind.to_string()),
+    else {
+        let stop = Select::with_theme(theme)
+            .with_prompt("Stop asking?")
+            .items([STOP_DISC, STOP_ALL, GO_ON])
+            .default(0)
+            .interact_opt()?;
+        return match stop {
+            Some(1) => Err(Stop::All.into()),
+            Some(2) => ask_title(theme, &t, episodes, main),
+            _ => Err(Stop::Disc.into()),
+        };
+    };
+    let kinds: Vec<String> = picked.iter().map(|&i| KINDS[i].to_string()).collect();
+    t.kind = Some(kinds.clone());
+    let has = |k: &str| kinds.iter().any(|x| x == k);
+    let only_menu = kinds.len() == 1 && has("menu");
+    if only_menu {
+        t.episodes = Some(Vec::new());
     }
-    let kind = t.kind.clone().unwrap_or_default();
-    if kind == "menu" || episodes.is_empty() {
-        if kind == "menu" {
-            t.episodes = Some(Vec::new());
-        }
+    if kinds.is_empty() || only_menu || episodes.is_empty() {
         return Ok(t);
     }
 
     // Regular episodes first for an episode, AniDB's other kinds (S, C, T...) first otherwise.
     let mut order: Vec<&Episode> = episodes.iter().collect();
-    if kind != "episode" {
+    if !has("episode") {
         order.sort_by_key(|e| (e.number.kind.is_none(), e.number));
     }
     let labels: Vec<String> = order
@@ -258,7 +268,7 @@ fn ask_title(
         .collect();
     let chosen = MultiSelect::with_theme(theme)
         .with_prompt(format!(
-            "{id}: which episodes are in it? (Space ticks, Enter confirms; none if it isn't one)"
+            "{id}: tick everything it contains, e.g. an episode plus trailers (Space ticks, Enter confirms)"
         ))
         .items(&labels)
         .defaults(&ticked)
@@ -287,10 +297,10 @@ fn ask_title(
     );
     t.anidb = work.filter(|w| Some(*w) != main);
 
-    if kind != "episode" {
+    if kinds.iter().any(|k| k != "episode" && k != "menu") {
         t.name = optional(
             theme,
-            &format!("{id}: name (e.g. Creditless opening)"),
+            &format!("{id}: name of the extras/trailers (e.g. PV, Creditless opening)"),
             t.name.as_deref(),
             |_| Ok(()),
         )?;
@@ -374,7 +384,7 @@ fn keep_disc_blanks(disc: &mut Disc) {
         field.get_or_insert_with(String::new);
     }
     for t in disc.titles.iter_mut().flatten() {
-        t.kind.get_or_insert_with(String::new);
+        t.kind.get_or_insert_with(Vec::new);
         t.episodes.get_or_insert_with(Vec::new);
     }
 }

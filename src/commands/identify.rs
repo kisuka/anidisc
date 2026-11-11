@@ -208,8 +208,9 @@ pub fn describe(t: &DiscTitle, m: &HashRecord) -> String {
             .join(", ");
     }
 
-    match (&t.name, &t.kind) {
-        (Some(name), kind) => format!("{}: {name}", kind.as_deref().unwrap_or("")),
-        (None, kind) => kind.clone().unwrap_or_default(),
+    let kind = t.kind.as_ref().map(|k| k.join(" + ")).unwrap_or_default();
+    match &t.name {
+        Some(name) => format!("{kind}: {name}"),
+        None => kind,
     }
 }

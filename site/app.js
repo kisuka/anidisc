@@ -65,8 +65,10 @@ function describe(t, series) {
       return ep?.title ? `${esc(epLabel(n))}: ${esc(ep.title)}` : esc(epLabel(n));
     }).join("<br>");
   }
-  if (!t.type) return `<span class="muted">not identified</span>`;
-  return esc(t.name ? `${t.type}: ${t.name}` : t.type);
+  // "type" is one kind ("episode") or several (["episode", "trailer"]).
+  const kind = [].concat(t.type ?? []).join(" + ");
+  if (!kind) return `<span class="muted">not identified</span>`;
+  return esc(t.name ? `${kind}: ${t.name}` : kind);
 }
 
 function discCard(disc, slug, series, highlight) {

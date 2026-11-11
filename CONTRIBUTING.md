@@ -41,9 +41,10 @@ anidisc contribute "D:\Rips\Some Show" -r --anidb 1336 -i
 ```
 
 After scanning each disc it asks for the region, label, catalog number and barcode, then goes
-through the disc's titles one by one: pick what each is (episode, extra, trailer, menu, other)
-and tick its episodes in a checklist of the series' episodes. Enter skips a question, Esc skips
-the rest of the disc; whatever you skip stays blank to fill in later.
+through the disc's titles one by one: tick what kinds of thing it holds (episode, extra,
+trailer, menu, other; several if it's, say, an episode followed by trailers), then tick
+everything in it from a checklist of the series' episodes, specials and trailers. Enter skips a
+question, Esc offers to skip the rest of the disc; whatever you skip stays blank to fill in later.
 
 Or fill them in by hand: open the files it lists. Every `""` and `[]` is for you; leave any
 you don't know empty. Don't change anything else: it was read from the disc.
@@ -55,7 +56,7 @@ you don't know empty. Don't change anything else: it was read from the disc.
 | disc file | `label` | How the release names this disc: `Volume 1`, `Disc 2`. Empty for a one-disc release |
 | | `catalogNumber` | Printed on the disc or the case's spine: `JDXA-57678` |
 | | `barcode` | The digits under the barcode on the back of the case (see [below](#barcodes)) |
-| | each title's `type` | `episode`, `extra`, `trailer`, `menu` or `other` |
+| | each title's `type` | `episode`, `extra`, `trailer`, `menu` or `other`; a list for a title holding several kinds: `["episode", "trailer"]` |
 | | each title's `episodes` | Which episodes it holds, numbered as in `series.json`: `[1]`, `[1, 2]`, `["S1"]` |
 
 To tell titles apart, play them (a player that lets you pick a title, such as VLC: *Playback →
@@ -125,7 +126,8 @@ without a type are fine) and open a pull request with the new files.
     { "title": 1, "duration": "0:29:58", "chapters": 6, "type": "episode", "episodes": [1] },
     { "title": 2, "duration": "0:01:30", "chapters": 1, "type": "trailer", "episodes": ["T1"] },
     { "title": 3, "duration": "0:12:40", "chapters": 3, "type": "extra", "name": "Making of", "episodes": ["S1"] },
-    { "title": 4, "duration": "0:00:12", "chapters": 1, "type": "menu" }
+    { "title": 4, "duration": "0:00:12", "chapters": 1, "type": "menu" },
+    { "title": 5, "duration": "0:32:10", "chapters": 8, "type": ["episode", "trailer"], "episodes": [2, "T2"] }
   ]
 }
 ```
@@ -142,9 +144,11 @@ without a type are fine) and open a pull request with the new files.
   Each pressing with a different layout is its own disc file, in the same release folder.
 - `label` is how the disc is named in its release: `Volume 1`, `Disc 2`, `Complete Edition`,
   `Specials`. Leave it out for a single-disc release.
-- For each title, set `type` (`episode`, `extra`, `trailer`, `menu`, `other`) and, when it is one
-  of the series' AniDB entries, the `episodes` it contains: `[1]`, `[1, 2]` for a title holding
-  both, `["S1"]` for a special, `["T1"]` for a trailer. An episode may appear in several titles
+- For each title, set `type` (`episode`, `extra`, `trailer`, `menu`, `other`), or a list of them
+  for a title holding several kinds (an episode followed by trailers: `["episode", "trailer"]`),
+  and the `episodes` it contains from the series' AniDB entries: `[1]`, `[1, 2]` for a title
+  holding both, `["S1"]` for a special, `["T1"]` for a trailer, `[1, "T1", "T2"]` for an episode
+  followed by two trailers. An episode may appear in several titles
   (a "play all" title and one per episode). Extras AniDB doesn't list just get a `name`. Titles you can't
   identify can keep no `type`; `validate` warns about them but accepts them.
 - Blu-ray titles use `"playlist": "00800.mpls"` instead of `"title"`.

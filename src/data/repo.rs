@@ -362,9 +362,9 @@ impl Validator {
             None => self
                 .warnings
                 .push(format!("{where_}: {id} has no type yet")),
-            Some(k) if !TITLE_TYPES.contains(&k.as_str()) => {
+            Some(kinds) if kinds.iter().any(|k| !TITLE_TYPES.contains(&k.as_str())) => {
                 self.errors.push(format!(
-                    "{where_}: {id} type must be one of {}",
+                    "{where_}: {id} type must be one or more of {}",
                     TITLE_TYPES.join(", ")
                 ));
             }
@@ -374,7 +374,7 @@ impl Validator {
         let Some(episodes) = t.episodes.as_ref().filter(|e| !e.is_empty()) else {
             return;
         };
-        if t.kind.as_deref() == Some("menu") {
+        if t.kind.as_deref() == Some(&["menu".to_string()][..]) {
             self.errors
                 .push(format!("{where_}: {id} is a menu but lists episodes"));
         }

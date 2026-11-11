@@ -202,14 +202,17 @@ pub struct DiscTitle {
     pub chapters: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
-    /// episode, extra, trailer, menu, other. Absent means not yet identified.
+    /// What the title is: episode, extra, trailer, menu, other. One ("episode") or several
+    /// (["episode", "trailer"]) for a title holding an episode followed by trailers. Absent means
+    /// not yet identified; Some(empty) is written as a "" blank for the contributor.
     #[serde(
         default,
-        deserialize_with = "blank",
+        deserialize_with = "types_in",
+        serialize_with = "types_out",
         rename = "type",
         skip_serializing_if = "Option::is_none"
     )]
-    pub kind: Option<String>,
+    pub kind: Option<Vec<String>>,
     /// Episodes (from the series' episode list) this title contains: 1, 2, "S1", "T1"...
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episodes: Option<Vec<EpisodeNumber>>,
@@ -230,6 +233,38 @@ pub struct DiscTitle {
 fn blank<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
     let value: Option<String> = Option::deserialize(d)?;
     Ok(value.filter(|v| !v.trim().is_empty()))
+}
+
+/// A title's type: "episode", or ["episode", "trailer"]; "" and [] read as not filled in.
+fn types_in<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<Vec<String>>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(String),
+        Many(Vec<String>),
+    }
+    let list = match Option::<OneOrMany>::deserialize(d)? {
+        None => Vec::new(),
+        Some(OneOrMany::One(t)) => vec![t],
+        Some(OneOrMany::Many(ts)) => ts,
+    };
+    let mut out: Vec<String> = Vec::new();
+    for t in list.into_iter().map(|t| t.trim().to_string()) {
+        if !t.is_empty() && !out.contains(&t) {
+            out.push(t);
+        }
+    }
+    Ok((!out.is_empty()).then_some(out))
+}
+
+/// One type is written as a plain string, several as a list, none as a "" blank.
+fn types_out<S: serde::Serializer>(v: &Option<Vec<String>>, s: S) -> Result<S::Ok, S::Error> {
+    match v.as_deref() {
+        None => s.serialize_none(),
+        Some([]) => s.serialize_str(""),
+        Some([one]) => s.serialize_str(one),
+        Some(many) => many.serialize(s),
+    }
 }
 
 /// The JSON keys each kind of data file may contain; anything else is an error, so typos in
