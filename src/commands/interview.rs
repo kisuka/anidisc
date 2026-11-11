@@ -11,7 +11,7 @@ use dialoguer::{Input, MultiSelect, Select};
 
 use crate::data::episode::EpisodeNumber;
 use crate::data::json::{self, Kind};
-use crate::data::models::{Disc, DiscTitle, Episode, Release, Series};
+use crate::data::models::{Disc, DiscTitle, Episode, NO_EPISODE_TYPES, Release, Series};
 use crate::data::repo::barcode_problem;
 
 /// Whether questions can be asked: both reading answers and showing menus need a terminal.
@@ -75,9 +75,88 @@ fn save<T: serde::Serialize>(path: &Path, value: &T) -> Result<(), Failure> {
     json::write_file(path, value).map_err(|e| Failure::Error(format!("{}: {e}", path.display())))
 }
 
+/// Other releases of the series, as (folder, "Volume 1 (QNB-M033), Volume 2 (QNB-M034)").
+fn other_releases(own: &Path) -> Vec<(std::path::PathBuf, String)> {
+    let Some(series_dir) = own.parent() else {
+        return Vec::new();
+    };
+    // A box holds discs of one kind: a DVD can only join a DVD release.
+    let media = |dir: &Path| -> Option<String> {
+        let text = std::fs::read_to_string(dir.join("release.json")).ok()?;
+        let r: Release = json::parse_lenient(&text, Kind::Release).ok()?;
+        Some(r.media.to_uppercase())
+    };
+    let own_media = media(own);
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(series_dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let dir = entry.path();
+        if dir == own || !dir.join("release.json").is_file() || media(&dir) != own_media {
+            continue;
+        }
+        let mut discs: Vec<String> = std::fs::read_dir(&dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.extension().is_some_and(|x| x == "json")
+                    && p.file_name().is_some_and(|n| n != "release.json")
+            })
+            .filter_map(|p| {
+                let d: Disc =
+                    json::parse_lenient(&std::fs::read_to_string(&p).ok()?, Kind::Disc).ok()?;
+                let label = d.label.unwrap_or_else(|| "Disc".to_string());
+                Some(match d.catalog_number {
+                    Some(c) => format!("{label} ({c})"),
+                    None => label,
+                })
+            })
+            .collect();
+        discs.sort();
+        let slug = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        out.push((dir, format!("{slug}: {}", discs.join(", "))));
+    }
+    out.sort_by(|a, b| a.1.cmp(&b.1));
+    out
+}
+
+/// For a disc that came in a box with others: moves its file into that box's release folder and
+/// removes the release folder `contribute` had just made for it. Returns the disc file's new path.
+fn join_release(
+    disc_file: &Path,
+    release_file: &Path,
+    into: &Path,
+) -> Result<std::path::PathBuf, Failure> {
+    let name = disc_file
+        .file_name()
+        .ok_or_else(|| Failure::Error("bad disc file name".into()))?;
+    let target = into.join(name);
+    if target.exists() {
+        return Err(Failure::Error(format!(
+            "{} already exists",
+            target.display()
+        )));
+    }
+    std::fs::rename(disc_file, &target)
+        .map_err(|e| Failure::Error(format!("could not move {}: {e}", disc_file.display())))?;
+    let _ = std::fs::remove_file(release_file);
+    if let Some(dir) = release_file.parent() {
+        let _ = std::fs::remove_dir(dir); // only if now empty
+    }
+    Ok(target)
+}
+
 fn run(f: &Files) -> Result<(), Failure> {
     let theme = ColorfulTheme::default();
-    let mut disc: Disc = read(f.disc_file, Kind::Disc)?;
+    let mut disc_file = f.disc_file.to_path_buf();
+    let mut new_release = f.new_release;
+    let mut disc: Disc = read(&disc_file, Kind::Disc)?;
     keep_disc_blanks(&mut disc);
     let series: Series = read(f.series_file, Kind::Series)?;
     let titles = disc.titles.as_ref().map_or(0, Vec::len);
@@ -96,7 +175,35 @@ fn run(f: &Files) -> Result<(), Failure> {
         series.title
     );
 
-    if f.new_release {
+    // A release is one product as sold. A disc sold on its own keeps the release made for it;
+    // a disc from a box set joins the release of the box, if another of its discs is already here.
+    let own_dir = f.release_file.parent().unwrap_or(Path::new("."));
+    let others = if new_release {
+        other_releases(own_dir)
+    } else {
+        Vec::new()
+    };
+    if !others.is_empty() {
+        let mut items = vec!["sold on its own (its own release)".to_string()];
+        items.extend(
+            others
+                .iter()
+                .map(|(_, d)| format!("in the same box as {d}")),
+        );
+        let choice = Select::with_theme(&theme)
+            .with_prompt("Was this disc sold on its own, or in one box with discs already added?")
+            .items(&items)
+            .default(0)
+            .interact_opt()?
+            .ok_or(Stop::Disc)?;
+        if choice > 0 {
+            disc_file = join_release(&disc_file, f.release_file, &others[choice - 1].0)?;
+            new_release = false;
+            eprintln!("   Moved to {}", disc_file.display());
+        }
+    }
+
+    if new_release {
         let mut release: Release = read(f.release_file, Kind::Release)?;
         for field in [
             &mut release.name,
@@ -106,7 +213,7 @@ fn run(f: &Files) -> Result<(), Failure> {
         ] {
             field.get_or_insert_with(String::new);
         }
-        eprintln!("   Release (shared by every disc in it):");
+        eprintln!("   Release (the product as sold: this volume, or the box it came in):");
         release.region = text(
             &theme,
             "Region (e.g. R2-JP, R1-US, A-JP)",
@@ -155,7 +262,7 @@ fn run(f: &Files) -> Result<(), Failure> {
         "Barcode on the case (a box set's, if it came in one)",
         disc.barcode.as_deref(),
     )?;
-    save(f.disc_file, &disc)?;
+    save(&disc_file, &disc)?;
 
     let episodes = series.episodes.clone().unwrap_or_default();
     let main = series.main_anidb();
@@ -166,13 +273,13 @@ fn run(f: &Files) -> Result<(), Failure> {
         let title = disc.titles.as_ref().expect("counted above")[i].clone();
         let answered = ask_title(&theme, &title, &episodes, main)?;
         disc.titles.as_mut().expect("counted above")[i] = answered;
-        save(f.disc_file, &disc)?;
+        save(&disc_file, &disc)?;
     }
-    eprintln!("   Saved {}", f.disc_file.display());
+    eprintln!("   Saved {}", disc_file.display());
     Ok(())
 }
 
-const KINDS: [&str; 5] = ["episode", "extra", "trailer", "menu", "other"];
+const KINDS: [&str; 6] = ["episode", "extra", "trailer", "menu", "notice", "other"];
 const STOP_DISC: &str = "skip the rest of this disc";
 const STOP_ALL: &str = "stop asking about all discs";
 const GO_ON: &str = "no, go back to this title";
@@ -233,7 +340,9 @@ fn ask_title(
     let kinds: Vec<String> = picked.iter().map(|&i| KINDS[i].to_string()).collect();
     t.kind = Some(kinds.clone());
     let has = |k: &str| kinds.iter().any(|x| x == k);
-    let only_menu = kinds.len() == 1 && has("menu");
+    // Menus and notices (copyright warnings, rating certificates) hold no episodes.
+    let only_menu =
+        !kinds.is_empty() && kinds.iter().all(|k| NO_EPISODE_TYPES.contains(&k.as_str()));
     if only_menu {
         t.episodes = Some(Vec::new());
     }
@@ -297,7 +406,10 @@ fn ask_title(
     );
     t.anidb = work.filter(|w| Some(*w) != main);
 
-    if kinds.iter().any(|k| k != "episode" && k != "menu") {
+    if kinds
+        .iter()
+        .any(|k| !matches!(k.as_str(), "episode" | "menu" | "notice"))
+    {
         t.name = optional(
             theme,
             &format!("{id}: name of the extras/trailers (e.g. PV, Creditless opening)"),

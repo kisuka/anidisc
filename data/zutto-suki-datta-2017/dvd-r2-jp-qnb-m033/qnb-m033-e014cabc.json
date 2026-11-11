@@ -11,9 +11,8 @@
       "duration": "0:00:21",
       "chapters": 1,
       "sizeBytes": 8101888,
-      "type": "other",
-      "episodes": [],
-      "name": "Notice"
+      "type": "notice",
+      "episodes": []
     },
     {
       "title": 2,

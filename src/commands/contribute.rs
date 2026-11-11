@@ -212,7 +212,7 @@ fn print_next_steps(data: &Path, stubs: &[Stub]) {
         "  barcode      the digits under the barcode on the case (13 for JAN/EAN, 12 for UPC); a box set's for each disc in it"
     );
     eprintln!(
-        "  titles       for each: \"type\" (episode, extra, trailer, menu, other) and, for episodes,"
+        "  titles       for each: \"type\" (episode, extra, trailer, menu, notice, other) and, for episodes,"
     );
     eprintln!(
         "               \"episodes\": [1], [1, 2], [\"S1\"] as numbered in series.json. Check by playing"
@@ -233,17 +233,28 @@ fn blank() -> Option<String> {
 fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::io::Result<Stub> {
     let hints = naming::guess(disc_path);
     let format = scan.format.clone().unwrap_or_default();
-    let media = match hints.media.as_deref() {
-        Some(m @ ("DVD" | "BD" | "UHD")) => m.to_string(),
-        _ if format == "dvd" => "DVD".to_string(),
+    // The disc itself decides DVD or Blu-ray; the name can only tell a UHD from a BD.
+    let media = match (format.as_str(), hints.media.as_deref()) {
+        ("dvd", _) => "DVD".to_string(),
+        (_, Some(m @ ("BD" | "UHD"))) => m.to_string(),
+        (_, Some("DVD")) if format.is_empty() => "DVD".to_string(),
         _ => "BD".to_string(),
     };
 
-    // Releases are told apart by media, region and edition tags, so a first press and a regular
-    // edition of the same region get separate folders.
+    // A release is one product as sold: a single volume, or a box set. Each disc starts as its own
+    // release, named by media, region, edition and its catalog number (or label, or hash); a
+    // re-pressing with the same catalog number lands in the same release. Discs of a box set are
+    // put together with `-i`, or by moving their files into one release folder.
+    let hash = scan.content_hash.clone().unwrap_or_default();
+    let short = hash[..8].to_lowercase();
+    let product = hints
+        .catalog_number
+        .clone()
+        .or_else(|| hints.label.clone())
+        .unwrap_or_else(|| short.clone());
     let release_slug = non_empty_slug(
         &format!(
-            "{media} {} {}",
+            "{media} {} {} {product}",
             hints.region.as_deref().unwrap_or(""),
             hints.edition.as_deref().unwrap_or("")
         ),
@@ -270,8 +281,6 @@ fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::i
     // Disc files are named <catalog>-<hash8>, or <hash8> without a catalog number. The hash part
     // keeps re-pressings that share a catalog number apart, and is unique because known hashes
     // were skipped above.
-    let hash = scan.content_hash.clone().unwrap_or_default();
-    let short = hash[..8].to_lowercase();
     let slug = match &hints.catalog_number {
         Some(c) => format!("{}-{short}", non_empty_slug(c, "disc")),
         None => short,

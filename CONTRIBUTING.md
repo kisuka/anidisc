@@ -4,13 +4,24 @@
 
 ```
 data/
-  binetsu-shoukougun-1997/          one folder per series: title and year
+  zutto-suki-datta-2017/            one folder per series: title and year
     series.json
-    dvd-r2-de/                      one folder per release: media, region, edition
+    dvd-r2-jp-qnb-m033/             one folder per release (a product as sold): Volume 1
       release.json
-      abc-123-611c8af2.json         one file per disc: catalog number + start of contentHash
-      2b19bf36.json                 ...or just the start of contentHash if it has no catalog number
+      qnb-m033-e014cabc.json        one file per disc: catalog number + start of contentHash
+    dvd-r2-jp-qnb-m034/             Volume 2, sold separately, is another release
+      release.json
+      qnb-m034-28c04376.json
+    dvd-r2-jp-complete-box/         a box set is one release holding several discs
+      release.json
+      abc-101-611c8af2.json
+      abc-102-2b19bf36.json
 ```
+
+A release is one product as sold, with its own release date and barcode: a single volume, or a
+box set. Volumes sold one by one are separate releases. `anidisc contribute` gives each disc its
+own release; for a box set, `-i` asks which discs came in one box, or move their files into one
+release folder yourself.
 
 Folder and file names are slugs: lowercase letters, digits and single hyphens. They only need to
 be unique and readable; nothing depends on them. A disc is identified by its `contentHash`.
@@ -42,7 +53,7 @@ anidisc contribute "D:\Rips\Some Show" -r --anidb 1336 -i
 
 After scanning each disc it asks for the region, label, catalog number and barcode, then goes
 through the disc's titles one by one: tick what kinds of thing it holds (episode, extra,
-trailer, menu, other; several if it's, say, an episode followed by trailers), then tick
+trailer, menu, notice, other; several if it's, say, an episode followed by trailers), then tick
 everything in it from a checklist of the series' episodes, specials and trailers. Enter skips a
 question, Esc offers to skip the rest of the disc; whatever you skip stays blank to fill in later.
 
@@ -56,7 +67,7 @@ you don't know empty. Don't change anything else: it was read from the disc.
 | disc file | `label` | How the release names this disc: `Volume 1`, `Disc 2`. Empty for a one-disc release |
 | | `catalogNumber` | Printed on the disc or the case's spine: `JDXA-57678` |
 | | `barcode` | The digits under the barcode on the back of the case (see [below](#barcodes)) |
-| | each title's `type` | `episode`, `extra`, `trailer`, `menu` or `other`; a list for a title holding several kinds: `["episode", "trailer"]` |
+| | each title's `type` | `episode`, `extra`, `trailer`, `menu`, `notice` or `other`; a list for a title holding several kinds: `["episode", "trailer"]` |
 | | each title's `episodes` | Which episodes it holds, numbered as in `series.json`: `[1]`, `[1, 2]`, `["S1"]` |
 
 To tell titles apart, play them (a player that lets you pick a title, such as VLC: *Playback →
@@ -110,7 +121,8 @@ without a type are fine) and open a pull request with the new files.
 
 - `region` is the tag used in file names: region code and country, such as `R2-JP`, `R1-US`, `A-JP`.
 - `media` is `DVD`, `BD` or `UHD`.
-- Everything else is optional. `name` gives the release a display name.
+- Everything else is optional. `name` gives the release a display name; without one the site
+  calls it after its discs ("Volume 1 · QNB-M033").
 
 ## Disc files
 
@@ -144,13 +156,15 @@ without a type are fine) and open a pull request with the new files.
   Each pressing with a different layout is its own disc file, in the same release folder.
 - `label` is how the disc is named in its release: `Volume 1`, `Disc 2`, `Complete Edition`,
   `Specials`. Leave it out for a single-disc release.
-- For each title, set `type` (`episode`, `extra`, `trailer`, `menu`, `other`), or a list of them
+- For each title, set `type` (`episode`, `extra`, `trailer`, `menu`, `notice`, `other`), or a list of them
   for a title holding several kinds (an episode followed by trailers: `["episode", "trailer"]`),
   and the `episodes` it contains from the series' AniDB entries: `[1]`, `[1, 2]` for a title
   holding both, `["S1"]` for a special, `["T1"]` for a trailer, `[1, "T1", "T2"]` for an episode
   followed by two trailers. An episode may appear in several titles
   (a "play all" title and one per episode). Extras AniDB doesn't list just get a `name`. Titles you can't
   identify can keep no `type`; `validate` warns about them but accepts them.
+- `notice` is for the screens shown before the disc starts: copyright warnings and rating
+  certificates (the Japan Contents Review Center / IPPA card). Like a `menu`, it lists no episodes.
 - Blu-ray titles use `"playlist": "00800.mpls"` instead of `"title"`.
 
 ## Checking

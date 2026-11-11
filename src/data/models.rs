@@ -12,7 +12,9 @@ use serde::{Deserialize, Serialize};
 use super::episode::EpisodeNumber;
 
 pub const MEDIA: [&str; 3] = ["DVD", "BD", "UHD"];
-pub const TITLE_TYPES: [&str; 5] = ["episode", "extra", "trailer", "menu", "other"];
+pub const TITLE_TYPES: [&str; 6] = ["episode", "extra", "trailer", "menu", "notice", "other"];
+/// Types that never hold episodes: menus, and notices (copyright warnings, rating certificates).
+pub const NO_EPISODE_TYPES: [&str; 2] = ["menu", "notice"];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -202,7 +204,7 @@ pub struct DiscTitle {
     pub chapters: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
-    /// What the title is: episode, extra, trailer, menu, other. One ("episode") or several
+    /// What the title is: episode, extra, trailer, menu, notice, other. One ("episode") or several
     /// (["episode", "trailer"]) for a title holding an episode followed by trailers. Absent means
     /// not yet identified; Some(empty) is written as a "" blank for the contributor.
     #[serde(

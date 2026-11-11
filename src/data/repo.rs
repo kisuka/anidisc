@@ -9,7 +9,9 @@ use serde::de::DeserializeOwned;
 
 use super::episode::EpisodeNumber;
 use super::json::{self, Kind};
-use super::models::{Disc, DiscTitle, Episode, MEDIA, Release, Series, TITLE_TYPES};
+use super::models::{
+    Disc, DiscTitle, Episode, MEDIA, NO_EPISODE_TYPES, Release, Series, TITLE_TYPES,
+};
 use crate::disc::listing;
 
 pub struct SeriesEntry {
@@ -374,9 +376,14 @@ impl Validator {
         let Some(episodes) = t.episodes.as_ref().filter(|e| !e.is_empty()) else {
             return;
         };
-        if t.kind.as_deref() == Some(&["menu".to_string()][..]) {
-            self.errors
-                .push(format!("{where_}: {id} is a menu but lists episodes"));
+        if let Some(kinds) = t.kind.as_deref()
+            && !kinds.is_empty()
+            && kinds.iter().all(|k| NO_EPISODE_TYPES.contains(&k.as_str()))
+        {
+            self.errors.push(format!(
+                "{where_}: {id} is a {} but lists episodes",
+                kinds.join(" + ")
+            ));
         }
         let main = s.main_anidb();
         let work = t.anidb.or(main);

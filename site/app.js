@@ -102,6 +102,15 @@ function discCard(disc, slug, series, highlight) {
     </section>`;
 }
 
+// A release is one product as sold. Without a name, it is called after its discs:
+// "Volume 1 · QNB-M033", or "Volume 1 + Volume 2" for a box.
+function releaseName(rel, discs) {
+  if (rel.name) return rel.name;
+  const parts = discs.map((d) => d.disc.label).filter(Boolean);
+  if (discs.length === 1 && discs[0].disc.catalogNumber) parts.push(discs[0].disc.catalogNumber);
+  return parts.length ? parts.join(discs.length === 1 ? " · " : " + ") : `${rel.media} ${rel.region}`;
+}
+
 async function renderSeries(slug, hitHash) {
   const rec = await getJson(`api/series/${encodeURIComponent(slug)}.json`);
   if (!rec) {
@@ -116,7 +125,7 @@ async function renderSeries(slug, hitHash) {
     const rel = r.release;
     const facts = [rel.media, rel.region, rel.publisher, rel.releaseDate, rel.edition].filter(Boolean);
     return `
-      <h2>${esc(rel.name || `${rel.media} ${rel.region}`)}</h2>
+      <h2>${esc(releaseName(rel, r.discs ?? []))}</h2>
       <div class="chips">${facts.map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>
       ${rel.notes ? `<p>${esc(rel.notes)}</p>` : ""}
       ${(r.discs ?? []).map((d) => discCard(d.disc, d.slug, s, d.disc.contentHash === hitHash)).join("")}`;
