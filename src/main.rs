@@ -116,6 +116,10 @@ enum Command {
         /// name/version (e.g. myclient/1), instead of from Kometa's cache. Defaults to $ANIDISC_ANIDB_CLIENT.
         #[arg(long, value_name = "name/version")]
         anidb_client: Option<String>,
+        /// After scanning each new disc, ask for its region, label, catalog number and barcode, and
+        /// what each title is, picking its episodes from a checklist.
+        #[arg(short, long)]
+        interactive: bool,
     },
     /// Check the data files.
     Validate {
@@ -178,6 +182,7 @@ fn main() {
             all,
             offline,
             anidb_client,
+            interactive,
         } => match (
             location::resolve(data.as_deref()),
             data::anidb::Client::from_option(anidb_client.as_deref()),
@@ -192,6 +197,7 @@ fn main() {
                 all,
                 offline,
                 anidb_client: client,
+                interactive,
             }),
         },
         Command::Validate { data } => match location::resolve(data.as_deref()) {

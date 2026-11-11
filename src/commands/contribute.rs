@@ -1,8 +1,8 @@
 //! Writes pre-filled data files for discs that are not in the database yet. Everything read from
 //! the disc (hash, titles, durations, files) is exact. The series is identified by an AniDB id given
 //! explicitly (see the matcher), and its titles and episodes come from AniDB; discs without an id
-//! are skipped, never filed under a guess. Release details come from the file name; fields that
-//! could not be filled are "TODO", which `validate` rejects.
+//! are skipped, never filed under a guess. Release details come from the file name; fields left
+//! for the contributor are written as blanks ("" and []), which read as not filled in.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use super::interview;
 use super::matcher::{self, SeriesMatch};
 use crate::data::anidb::{self, AnidbRecords, Anime};
 use crate::data::json::{self, Kind};
@@ -29,9 +30,15 @@ pub struct Options<'a> {
     pub all: bool,
     pub offline: bool,
     pub anidb_client: Option<anidb::Client>,
+    /// Ask about each new disc (region, label, what each title is) instead of leaving blanks.
+    pub interactive: bool,
 }
 
 pub fn run(o: Options) -> ExitCode {
+    if o.interactive && !interview::available() {
+        eprintln!("--interactive needs a terminal to ask questions in.");
+        return ExitCode::BadArguments;
+    }
     let mut lookup = None;
     if !o.all && (o.db.is_some() || std::env::var(lookup::ENVIRONMENT_VARIABLE).is_ok()) {
         match HashLookup::create(o.db) {
@@ -70,6 +77,8 @@ pub fn run(o: Options) -> ExitCode {
     };
     let mut unmatched = Vec::new();
     let (mut written, mut skipped, mut failed) = (0, 0, 0);
+    let mut stubs: Vec<Stub> = Vec::new();
+    let mut interactive = o.interactive;
     for (path, root) in &discs {
         let scan = scanner::scan(path);
         let (Some(hash), Some(_)) = (&scan.content_hash, &scan.titles) else {
@@ -103,10 +112,28 @@ pub fn run(o: Options) -> ExitCode {
 
         let series_dir = series.resolve(&m);
         match write_disc(&series_dir, path, &scan) {
-            Ok(file) => {
+            Ok(stub) => {
                 existing.insert(hash.clone());
                 written += 1;
-                println!("{}", file.display());
+                println!("{}", stub.disc.display());
+                if interactive {
+                    let files = interview::Files {
+                        disc_path: path,
+                        disc_file: &stub.disc,
+                        release_file: &stub.release,
+                        new_release: stub.new_release,
+                        series_file: &series_dir.join("series.json"),
+                    };
+                    match interview::ask(&files) {
+                        Ok(interview::Next::Continue) => {}
+                        Ok(interview::Next::StopAll) => interactive = false,
+                        Err(e) => {
+                            eprintln!("Stopped asking: {e}");
+                            interactive = false;
+                        }
+                    }
+                }
+                stubs.push(stub);
             }
             Err(e) => {
                 failed += 1;
@@ -123,11 +150,14 @@ pub fn run(o: Options) -> ExitCode {
     if !unmatched.is_empty() {
         matcher::print_help(&unmatched);
     }
-    if written > 0 {
+    if !stubs.is_empty() && o.interactive {
         eprintln!();
         eprintln!(
-            "Check what was guessed, fill in any TODO fields and title types, then run `anidisc validate`."
+            "Anything you skipped is still blank (\"\" or []) in the files listed above; fill it in any time."
         );
+        eprintln!("Then run `anidisc validate`.");
+    } else if !stubs.is_empty() {
+        print_next_steps(&o.data, &stubs);
     }
 
     if failed > 0 || !unmatched.is_empty() {
@@ -137,7 +167,73 @@ pub fn run(o: Options) -> ExitCode {
     }
 }
 
-fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::io::Result<PathBuf> {
+/// The files written for one disc.
+struct Stub {
+    disc: PathBuf,
+    release: PathBuf,
+    new_release: bool,
+}
+
+/// What to do with the written files, in plain words.
+fn print_next_steps(data: &Path, stubs: &[Stub]) {
+    let show = |p: &Path| {
+        p.strip_prefix(data)
+            .map(|r| Path::new("data").join(r).display().to_string())
+            .unwrap_or_else(|_| p.display().to_string())
+    };
+    let mut releases: Vec<&Path> = Vec::new();
+    for s in stubs.iter().filter(|s| s.new_release) {
+        if !releases.contains(&s.release.as_path()) {
+            releases.push(&s.release);
+        }
+    }
+
+    eprintln!();
+    eprintln!(
+        "Next: fill in what only someone with the disc knows. Blank fields (\"\" and []) are"
+    );
+    eprintln!("yours to fill; leave any you don't know blank.");
+    if !releases.is_empty() {
+        eprintln!();
+        eprintln!("In each new release.json:");
+        eprintln!("  region       required: region code and country, e.g. R2-JP, R1-US, A-JP");
+        eprintln!("  name, publisher, releaseDate (YYYY-MM-DD), edition    if you know them");
+        eprintln!(
+            "  barcode      the barcode digits of a box set (13-digit JAN/EAN or 12-digit UPC)"
+        );
+        for r in &releases {
+            eprintln!("    {}", show(r));
+        }
+    }
+    eprintln!();
+    eprintln!("In each disc file:");
+    eprintln!(
+        "  label        how the release names this disc: \"Volume 1\", \"Disc 2\"; blank if it's the only one"
+    );
+    eprintln!("  catalogNumber  printed on the disc or the case's spine, e.g. JDXA-57678");
+    eprintln!(
+        "  barcode      if the disc was sold on its own: 13-digit JAN/EAN or 12-digit UPC, digits only"
+    );
+    eprintln!(
+        "  titles       for each: \"type\" (episode, extra, trailer, menu, other) and, for episodes,"
+    );
+    eprintln!(
+        "               \"episodes\": [1], [1, 2], [\"S1\"] as numbered in series.json. Check by playing"
+    );
+    eprintln!("               the title; the long ones are usually the episodes.");
+    eprintln!("  everything else (hash, durations, files) was read from the disc: don't change it");
+    for s in stubs {
+        eprintln!("    {}", show(&s.disc));
+    }
+    eprintln!();
+    eprintln!("Then run `anidisc validate`. CONTRIBUTING.md explains every field.");
+}
+
+fn blank() -> Option<String> {
+    Some(String::new())
+}
+
+fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::io::Result<Stub> {
     let hints = naming::guess(disc_path);
     let format = scan.format.clone().unwrap_or_default();
     let media = match hints.media.as_deref() {
@@ -158,17 +254,18 @@ fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::i
     );
     let release_dir = series_dir.join(release_slug);
     let release_file = release_dir.join("release.json");
-    if !release_file.exists() {
+    let new_release = !release_file.exists();
+    if new_release {
         json::write_file(
             &release_file,
             &Release {
-                region: hints.region.clone().unwrap_or_else(|| TODO.to_string()),
+                region: hints.region.clone().unwrap_or_default(),
                 media,
-                name: None,
-                publisher: None,
-                release_date: None,
-                edition: hints.edition.clone(),
-                upc: None,
+                name: blank(),
+                publisher: blank(),
+                release_date: blank(),
+                edition: hints.edition.clone().or_else(blank),
+                barcode: blank(),
                 notes: None,
             },
         )?;
@@ -189,16 +286,30 @@ fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::i
         &Disc {
             content_hash: hash,
             format,
-            label: hints.label,
-            catalog_number: hints.catalog_number,
+            label: hints.label.or_else(blank),
+            catalog_number: hints.catalog_number.or_else(blank),
+            barcode: blank(),
             pressing: None,
             volume_label: scan.volume_label.clone(),
-            titles: scan.titles.clone(),
+            titles: scan.titles.clone().map(|titles| {
+                titles
+                    .into_iter()
+                    .map(|mut t| {
+                        t.kind = t.kind.or_else(blank);
+                        t.episodes = t.episodes.or_else(|| Some(Vec::new()));
+                        t
+                    })
+                    .collect()
+            }),
             files: Some(scan.files.clone()),
             notes: None,
         },
     )?;
-    Ok(file)
+    Ok(Stub {
+        disc: file,
+        release: release_file,
+        new_release,
+    })
 }
 
 fn non_empty_slug(text: &str, fallback: &str) -> String {

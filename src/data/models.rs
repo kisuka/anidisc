@@ -18,7 +18,11 @@ pub const TITLE_TYPES: [&str; 5] = ["episode", "extra", "trailer", "menu", "othe
 #[serde(rename_all = "camelCase")]
 pub struct Series {
     pub title: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub original_title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub year: Option<i32>,
@@ -28,7 +32,11 @@ pub struct Series {
     pub aliases: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episodes: Option<Vec<Episode>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub notes: Option<String>,
 }
 
@@ -45,13 +53,25 @@ pub struct Episode {
     /// 1, 2... for regular episodes; "S1", "C1", "T1", "P1", "O1" for AniDB's other kinds.
     pub number: EpisodeNumber,
     /// English title (AniDB's), or the romaji / original one when there is no English title.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub title: Option<String>,
     /// Romanized Japanese title, e.g. "Hokenshitsu e Youkoso".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub romaji_title: Option<String>,
     /// Title in the original language and script, e.g. "保健室へようこそ".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub original_title: Option<String>,
     /// AniDB anime id this episode belongs to, when the series spans several AniDB entries.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -65,17 +85,42 @@ pub struct Release {
     pub region: String,
     /// DVD, BD or UHD.
     pub media: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub publisher: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub release_date: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub edition: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub upc: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Barcode of a box set or single-disc release: EAN-13 / JAN (13 digits) or UPC-A (12).
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub barcode: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub notes: Option<String>,
 }
 
@@ -86,15 +131,39 @@ pub struct Disc {
     /// dvd or blu-ray.
     pub format: String,
     /// Volume 1, Disc 2, Complete Edition, Specials... Absent for a single-disc release.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub label: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub catalog_number: Option<String>,
+    /// Barcode of the disc when it was sold on its own (one volume of a series): EAN-13 / JAN
+    /// (13 digits) or UPC-A (12).
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub barcode: Option<String>,
     /// Tells re-pressings apart when they share a catalog number, e.g. "2nd pressing, 2009".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub pressing: Option<String>,
     /// The file system volume label, for reference only.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub volume_label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub titles: Option<Vec<DiscTitle>>,
@@ -102,7 +171,11 @@ pub struct Disc {
     /// resized) is reported as altered even though its contentHash matches.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub files: Option<Vec<DiscFile>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub notes: Option<String>,
 }
 
@@ -119,17 +192,30 @@ pub struct DiscTitle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<i32>,
     /// Blu-ray playlist file, e.g. 00800.mpls.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub playlist: Option<String>,
     /// h:mm:ss, as read from the disc.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub duration: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chapters: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
     /// episode, extra, trailer, menu, other. Absent means not yet identified.
-    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        rename = "type",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub kind: Option<String>,
     /// Episodes (from the series' episode list) this title contains: 1, 2, "S1", "T1"...
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -138,8 +224,19 @@ pub struct DiscTitle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anidb: Option<i32>,
     /// Name for extras ("Creditless opening", "Trailer").
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "blank",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub name: Option<String>,
+}
+
+/// Reads an optional text field, treating "" (or only spaces) as not filled in. `contribute`
+/// writes empty fields as blanks for contributors to fill.
+fn blank<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    let value: Option<String> = Option::deserialize(d)?;
+    Ok(value.filter(|v| !v.trim().is_empty()))
 }
 
 /// The JSON keys each kind of data file may contain; anything else is an error, so typos in
@@ -162,7 +259,7 @@ pub mod keys {
         "publisher",
         "releaseDate",
         "edition",
-        "upc",
+        "barcode",
         "notes",
     ];
     pub const DISC: &[&str] = &[
@@ -170,6 +267,7 @@ pub mod keys {
         "format",
         "label",
         "catalogNumber",
+        "barcode",
         "pressing",
         "volumeLabel",
         "titles",

@@ -49,6 +49,7 @@ anidisc organize <paths> -d <folder> [-r]     plan moves into Series (Year)/Labe
 anidisc organize ... --apply                  ...and do them (writes an undo log)
 anidisc undo <log>                            put everything back
 anidisc contribute <paths> [-r]               write pre-filled data files for unknown discs
+anidisc contribute ... -i                     ...and ask about each disc, with an episode checklist
 anidisc validate                              check data/
 anidisc build                                 build the static site into _site/
 ```
@@ -146,13 +147,14 @@ when needed); `logs/` holds what `anidisc undo` needs.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+Have a disc that isn't listed? Run, inside a copy of this repository,
 
 ```
-anidisc contribute "D:\Anime\Some Show (2003)" -r --db https://anidisc.com
+anidisc contribute "D:\Anime\Some Show" -r --anidb <AniDB id>
 ```
 
-writes `data/<series>/<release>/<disc>.json` for each disc the database does not have, with the
-hash, titles, lengths and chapter counts read from the disc and the rest guessed from the file
-names. Fill in the `TODO`s and the episode numbers, run `anidisc validate`, and open a pull
-request.
+It writes a file for each disc the database doesn't have yet, with everything that can be read
+from the disc. Add `-i` to be asked about each disc as it goes, ticking its episodes in a
+checklist; otherwise fill in the blanks it points out (region, volume label, which episodes each title
+holds), run `anidisc validate`, and open a pull request. [CONTRIBUTING.md](CONTRIBUTING.md) walks
+through it step by step.

@@ -17,14 +17,54 @@ be unique and readable; nothing depends on them. A disc is identified by its `co
 
 ## Adding discs
 
+You need a copy of this repository, the `anidisc` program, and the discs (or untouched ISOs of
+them). Most of the work is done for you; you only add what can't be read from a disc.
+
+**1. Find the series' AniDB id.** Look the series up on [anidb.net](https://anidb.net); the id
+is the number in its address, e.g. `anidb.net/anime/1336` → `1336`.
+
+**2. Let `anidisc` write the files.** From inside your copy of the repository:
+
 ```
-anidisc contribute "D:\Rips\Some Show" -r --anidb 12345
+anidisc contribute "D:\Rips\Some Show" -r --anidb 1336
 ```
 
-writes everything `anidisc` can read from the discs, and with an AniDB id also the series'
-titles and episodes. Instead of `--anidb`, a disc's series can be given by an
-`anidisc.json` or an `[anidb-12345]` folder tag; see "Which series a disc belongs to" in the README. Check the result, then fill in what only you know: the release details, each
-disc's `label`, and each title's `type` and `episodes`.
+For each disc it doesn't know yet, this creates the series (titles and episode list from AniDB),
+a release folder, and a file for the disc with its fingerprint, titles, lengths and file list.
+Instead of `--anidb`, a disc's series can be given by an `anidisc.json` or an `[anidb-1336]`
+folder tag; see "Which series a disc belongs to" in the README.
+
+**3. Fill in the blanks.** The easiest way is to add `-i` (interactive) to the command above:
+
+```
+anidisc contribute "D:\Rips\Some Show" -r --anidb 1336 -i
+```
+
+After scanning each disc it asks for the region, label, catalog number and barcode, then goes
+through the disc's titles one by one: pick what each is (episode, extra, trailer, menu, other)
+and tick its episodes in a checklist of the series' episodes. Enter skips a question, Esc skips
+the rest of the disc; whatever you skip stays blank to fill in later.
+
+Or fill them in by hand: open the files it lists. Every `""` and `[]` is for you; leave any
+you don't know empty. Don't change anything else: it was read from the disc.
+
+| File | Field | What to put |
+| --- | --- | --- |
+| `release.json` | `region` | **Required.** Region code and country: `R2-JP`, `R1-US`, `A-JP` |
+| | `name`, `publisher`, `releaseDate`, `edition` | If you know them. Date as `2004-06-25`, `2004-06` or `2004` |
+| | `barcode` | A box set's barcode digits (see [below](#barcodes)) |
+| disc file | `label` | How the release names this disc: `Volume 1`, `Disc 2`. Empty for a one-disc release |
+| | `catalogNumber` | Printed on the disc or the case's spine: `JDXA-57678` |
+| | `barcode` | The disc's own barcode, if it was sold on its own |
+| | each title's `type` | `episode`, `extra`, `trailer`, `menu` or `other` |
+| | each title's `episodes` | Which episodes it holds, numbered as in `series.json`: `[1]`, `[1, 2]`, `["S1"]` |
+
+To tell titles apart, play them (a player that lets you pick a title, such as VLC: *Playback →
+Title*) or go by length: the long ones are usually the episodes, and a title holding several
+episodes in a row is a "play all". Titles you can't identify can stay empty.
+
+**4. Check and send.** Run `anidisc validate` (it must report 0 errors; warnings about titles
+without a type are fine) and open a pull request with the new files.
 
 ## series.json
 
@@ -65,13 +105,14 @@ disc's `label`, and each title's `type` and `episodes`.
   "publisher": "Example Media",
   "releaseDate": "2003-05",
   "edition": "Limited Edition",
-  "upc": "4012345678901"
+  "barcode": "4006381333931"
 }
 ```
 
 - `region` is the tag used in file names: region code and country, such as `R2-JP`, `R1-US`, `A-JP`.
 - `media` is `DVD`, `BD` or `UHD`.
-- Everything else is optional. `name` gives the release a display name.
+- Everything else is optional. `name` gives the release a display name; `barcode` is for a box set
+  sold as one product.
 
 ## Disc files
 
@@ -81,6 +122,7 @@ disc's `label`, and each title's `type` and `episodes`.
   "format": "dvd",
   "label": "Volume 1",
   "catalogNumber": "ABC-123",
+  "barcode": "4988102012342",
   "volumeLabel": "BINETSU_1",
   "titles": [
     { "title": 1, "duration": "0:29:58", "chapters": 6, "type": "episode", "episodes": [1] },
@@ -98,6 +140,8 @@ disc's `label`, and each title's `type` and `episodes`.
   added or files removed, so contribute from the original disc or an untouched ISO of it, keeping
   files the pressing itself carries (`.DS_Store`, PC/Mac extras). `validate` checks that the
   listing produces the disc's `contentHash`.
+- `barcode` is the disc's own barcode when it was sold on its own, as anime DVD volumes usually
+  are. For a box set, put the box's barcode in `release.json` instead.
 - `pressing` tells re-pressings apart when they share a catalog number (`"2nd pressing, 2009"`).
   Each pressing with a different layout is its own disc file, in the same release folder.
 - `label` is how the disc is named in its release: `Volume 1`, `Disc 2`, `Complete Edition`,
@@ -117,3 +161,10 @@ anidisc identify <your disc> --db .
 ```
 
 `validate` must report 0 errors. Pull requests are validated automatically.
+
+## Barcodes
+
+`barcode` is the number printed under the bars on the back of the case or its obi: 13 digits for
+a JAN (Japan) or EAN (Europe) code, 12 for a UPC (North America). Write the digits only, without
+spaces or dashes. It is optional; `validate` checks the length and the last (check) digit, so a
+typo is caught.

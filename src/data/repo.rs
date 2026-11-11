@@ -278,9 +278,16 @@ impl Validator {
                 "{where_}/release.json: releaseDate must be YYYY, YYYY-MM or YYYY-MM-DD"
             ));
         }
+        if let Some(problem) = r.barcode.as_deref().and_then(barcode_problem) {
+            self.errors
+                .push(format!("{where_}/release.json: barcode {problem}"));
+        }
     }
 
     fn disc(&mut self, d: &Disc, s: &Series, r: &Release, where_: &str) {
+        if let Some(problem) = d.barcode.as_deref().and_then(barcode_problem) {
+            self.errors.push(format!("{where_}: barcode {problem}"));
+        }
         if !is_hash(&d.content_hash) {
             self.errors.push(format!(
                 "{where_}: contentHash must be 32 uppercase hex characters"
@@ -395,5 +402,46 @@ impl Validator {
                 }
             }
         }
+    }
+}
+
+/// What is wrong with a barcode, if anything: it must be the digits printed under the bars of an
+/// EAN-13 / JAN (13), UPC-A (12) or EAN-8 (8) code, with a correct check digit.
+pub fn barcode_problem(code: &str) -> Option<String> {
+    if !code.bytes().all(|b| b.is_ascii_digit()) {
+        return Some(format!(
+            "\"{code}\" must be digits only (no spaces or dashes)"
+        ));
+    }
+    if ![8, 12, 13].contains(&code.len()) {
+        return Some(format!(
+            "\"{code}\" must be 13 digits (EAN / JAN), 12 (UPC) or 8 (EAN-8)"
+        ));
+    }
+    // Weights 3 and 1 alternate from the digit before the check digit, leftwards.
+    let digits: Vec<u32> = code.bytes().map(|b| u32::from(b - b'0')).collect();
+    let (body, check) = digits.split_at(digits.len() - 1);
+    let sum: u32 = body
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, d)| if i % 2 == 0 { d * 3 } else { *d })
+        .sum();
+    ((10 - sum % 10) % 10 != check[0])
+        .then(|| format!("\"{code}\" has a wrong check digit; check it for typos"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::barcode_problem;
+
+    #[test]
+    fn barcodes() {
+        assert!(barcode_problem("4006381333931").is_none()); // EAN-13
+        assert!(barcode_problem("036000291452").is_none()); // UPC-A
+        assert!(barcode_problem("96385074").is_none()); // EAN-8
+        assert!(barcode_problem("4006381333932").is_some()); // wrong check digit
+        assert!(barcode_problem("4006-381333931").is_some());
+        assert!(barcode_problem("12345").is_some());
     }
 }
