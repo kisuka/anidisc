@@ -218,10 +218,11 @@ pub struct DiscTitle {
     /// Episodes (from the series' episode list) this title contains: 1, 2, "S1", "T1"...
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episodes: Option<Vec<EpisodeNumber>>,
-    /// AniDB anime id the episode numbers refer to, when the series spans several.
+    /// AniDB anime id the episode numbers refer to, when the series spans several, or when the
+    /// title is an episode of a different show included as a bonus (its title then goes in name).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anidb: Option<i32>,
-    /// Name for extras ("Creditless opening", "Trailer").
+    /// Name for extras ("Creditless opening", "Trailer"), or the other show's title.
     #[serde(
         default,
         deserialize_with = "blank",

@@ -50,8 +50,9 @@ pub fn run(o: Options) -> ExitCode {
         }
     }
 
-    // Discs already present in this checkout are always skipped, whatever --db says.
-    let mut existing = HashSet::new();
+    // Discs already present in this checkout are skipped, whatever --db says; with -i, one whose
+    // questions weren't all answered (the run was stopped part way) is picked up again.
+    let mut existing: HashMap<String, PathBuf> = HashMap::new();
     collect_hashes(&o.data, &mut existing);
 
     let mut discs: Vec<(PathBuf, PathBuf)> = Vec::new();
@@ -99,7 +100,46 @@ pub fn run(o: Options) -> ExitCode {
             Some(Ok(r)) => r.is_some(),
             None => false,
         };
-        if existing.contains(hash) || known {
+        if let Some(file) = existing.get(hash).cloned() {
+            let open = interview::unfinished(&file);
+            if interactive && open {
+                eprintln!(
+                    "{}: already in the data folder but not finished; picking up where it was left",
+                    path.display()
+                );
+                let release_dir = file.parent().unwrap_or(Path::new("."));
+                let series_dir = release_dir.parent().unwrap_or(Path::new("."));
+                let files = interview::Files {
+                    disc_path: path,
+                    disc_file: &file,
+                    release_file: &release_dir.join("release.json"),
+                    new_release: interview::only_disc(&file),
+                    series_file: &series_dir.join("series.json"),
+                };
+                let anidb = &mut series.anidb;
+                match interview::ask(&files, &mut |aid| anidb.get(aid)) {
+                    Ok(interview::Next::Continue) => {}
+                    Ok(interview::Next::StopAll) => interactive = false,
+                    Err(e) => {
+                        eprintln!("Stopped asking: {e}");
+                        interactive = false;
+                    }
+                }
+            } else {
+                eprintln!(
+                    "{}: already in the data folder, skipped{}",
+                    path.display(),
+                    if open {
+                        " (some titles are still unidentified; -i asks about them)"
+                    } else {
+                        ""
+                    }
+                );
+            }
+            skipped += 1;
+            continue;
+        }
+        if known {
             skipped += 1;
             eprintln!("{}: already in the database, skipped", path.display());
             continue;
@@ -113,7 +153,7 @@ pub fn run(o: Options) -> ExitCode {
         let series_dir = series.resolve(&m);
         match write_disc(&series_dir, path, &scan) {
             Ok(stub) => {
-                existing.insert(hash.clone());
+                existing.insert(hash.clone(), stub.disc.clone());
                 written += 1;
                 println!("{}", stub.disc.display());
                 if interactive {
@@ -124,7 +164,8 @@ pub fn run(o: Options) -> ExitCode {
                         new_release: stub.new_release,
                         series_file: &series_dir.join("series.json"),
                     };
-                    match interview::ask(&files) {
+                    let anidb = &mut series.anidb;
+                    match interview::ask(&files, &mut |aid| anidb.get(aid)) {
                         Ok(interview::Next::Continue) => {}
                         Ok(interview::Next::StopAll) => interactive = false,
                         Err(e) => {
@@ -326,7 +367,7 @@ fn non_empty_slug(text: &str, fallback: &str) -> String {
     }
 }
 
-fn collect_hashes(dir: &Path, out: &mut HashSet<String>) {
+fn collect_hashes(dir: &Path, out: &mut HashMap<String, PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
@@ -347,7 +388,7 @@ fn collect_hashes(dir: &Path, out: &mut HashSet<String>) {
                         .map(str::to_string)
                 });
             if let Some(h) = hash {
-                out.insert(h);
+                out.insert(h, path);
             }
         }
     }

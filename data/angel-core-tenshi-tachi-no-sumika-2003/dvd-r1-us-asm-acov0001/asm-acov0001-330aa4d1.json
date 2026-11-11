@@ -1,0 +1,168 @@
+{
+  "contentHash": "330AA4D1520E3B8BEF51751CD52930E1",
+  "format": "dvd",
+  "label": "Volume 1",
+  "catalogNumber": "ASM-ACOV0001",
+  "barcode": "689076386333",
+  "volumeLabel": "20110713_025523",
+  "titles": [
+    {
+      "title": 1,
+      "duration": "0:27:44",
+      "chapters": 6,
+      "sizeBytes": 1747585024,
+      "type": "episode",
+      "episodes": []
+    },
+    {
+      "title": 2,
+      "duration": "0:27:44",
+      "chapters": 6,
+      "sizeBytes": 1747585024,
+      "type": "episode",
+      "episodes": []
+    },
+    {
+      "title": 3,
+      "duration": "0:12:24",
+      "chapters": 3,
+      "sizeBytes": 781731840,
+      "type": "other",
+      "episodes": [],
+      "name": "H-Scene Only"
+    },
+    {
+      "title": 4,
+      "duration": "0:00:09",
+      "chapters": 1,
+      "sizeBytes": 3129344,
+      "type": "notice",
+      "episodes": []
+    },
+    {
+      "title": 5,
+      "duration": "0:10:46",
+      "chapters": 5,
+      "sizeBytes": 403531776,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 6,
+      "duration": "0:03:20",
+      "chapters": 40,
+      "sizeBytes": 5754880,
+      "type": "extra",
+      "episodes": [],
+      "name": "Photo Gallery"
+    },
+    {
+      "title": 7,
+      "duration": "0:19:04",
+      "chapters": 1,
+      "sizeBytes": 726945792,
+      "type": "episode",
+      "episodes": [1],
+      "anidb": 4256,
+      "name": "Mini Skirt Jogakuen"
+    }
+  ],
+  "files": [
+    {
+      "path": "VIDEO_TS/VIDEO_TS.BUP",
+      "size": 20480
+    },
+    {
+      "path": "VIDEO_TS/VIDEO_TS.IFO",
+      "size": 20480
+    },
+    {
+      "path": "VIDEO_TS/VIDEO_TS.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.BUP",
+      "size": 57344
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.IFO",
+      "size": 57344
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.VOB",
+      "size": 198768640
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_1.VOB",
+      "size": 1073565696
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_2.VOB",
+      "size": 674019328
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_1.VOB",
+      "size": 3129344
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.BUP",
+      "size": 24576
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.IFO",
+      "size": 24576
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_1.VOB",
+      "size": 403531776
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_1.VOB",
+      "size": 5754880
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.BUP",
+      "size": 30720
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.IFO",
+      "size": 30720
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_1.VOB",
+      "size": 726945792
+    }
+  ]
+}

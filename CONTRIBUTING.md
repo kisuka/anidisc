@@ -54,8 +54,12 @@ anidisc contribute "D:\Rips\Some Show" -r --anidb 1336 -i
 After scanning each disc it asks for the region, label, catalog number and barcode, then goes
 through the disc's titles one by one: tick what kinds of thing it holds (episode, extra,
 trailer, menu, notice, other; several if it's, say, an episode followed by trailers), then tick
-everything in it from a checklist of the series' episodes, specials and trailers. Enter skips a
+everything in it from a checklist of the series' episodes, specials and trailers. The last item
+of that checklist is for an episode of another show (bonus footage): it asks for the show's
+AniDB id, then its episodes and title. Enter skips a
 question, Esc offers to skip the rest of the disc; whatever you skip stays blank to fill in later.
+Stopped part way (Esc or Ctrl+C)? Run the same command again: discs with unanswered titles are
+picked up at the first one, and titles already answered are not asked again.
 
 Or fill them in by hand: open the files it lists. Every `""` and `[]` is for you; leave any
 you don't know empty. Don't change anything else: it was read from the disc.
@@ -165,6 +169,10 @@ without a type are fine) and open a pull request with the new files.
   identify can keep no `type`; `validate` warns about them but accepts them.
 - `notice` is for the screens shown before the disc starts: copyright warnings and rating
   certificates (the Japan Contents Review Center / IPPA card). Like a `menu`, it lists no episodes.
+- A title holding an episode of a **different show** (a whole OVA included as bonus footage) gets
+  that show's AniDB id in `anidb`, its episode numbers in `episodes`, and its title in `name`:
+  `{ "type": "episode", "anidb": 4256, "episodes": [1], "name": "Mini Skirt Jogakuen" }`.
+  Don't add the other show to `series.json`; it isn't part of this series.
 - Blu-ray titles use `"playlist": "00800.mpls"` instead of `"title"`.
 
 ## Checking

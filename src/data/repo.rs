@@ -387,6 +387,19 @@ impl Validator {
         }
         let main = s.main_anidb();
         let work = t.anidb.or(main);
+        // An episode of a different show, included as a bonus: its numbers are that show's own,
+        // which this series' episode list doesn't hold.
+        if let Some(other) = t
+            .anidb
+            .filter(|a| !s.anidb.iter().flatten().any(|x| x == a))
+        {
+            if t.name.is_none() {
+                self.warnings.push(format!(
+                    "{where_}: {id} is from another show (AniDB {other}); put that show's title in \"name\""
+                ));
+            }
+            return;
+        }
         match &s.episodes {
             None => self.warnings.push(format!(
                 "{where_}: {id} lists episodes but the series has no episode list"

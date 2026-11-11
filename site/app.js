@@ -60,6 +60,11 @@ function describe(t, series) {
   if (t.episodes?.length) {
     const main = series.anidb?.[0];
     const work = t.anidb ?? main;
+    // An episode of a different show included as a bonus: its title is in "name".
+    if (t.anidb && !(series.anidb ?? []).includes(t.anidb)) {
+      const show = `<a href="https://anidb.net/anime/${t.anidb}" rel="noreferrer">${esc(t.name ?? `AniDB ${t.anidb}`)}</a>`;
+      return `${t.episodes.map((n) => esc(epLabel(n))).join(", ")} of ${show} <span class="muted">(bonus, another show)</span>`;
+    }
     return t.episodes.map((n) => {
       const ep = series.episodes?.find((e) => e.number === n && (e.anidb ?? main) === work);
       return ep?.title ? `${esc(epLabel(n))}: ${esc(ep.title)}` : esc(epLabel(n));

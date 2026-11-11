@@ -190,6 +190,14 @@ pub fn describe(t: &DiscTitle, m: &HashRecord) -> String {
     if let Some(episodes) = t.episodes.as_ref().filter(|e| !e.is_empty()) {
         let main = m.series.anidb.as_ref().and_then(|a| a.first().copied());
         let work = t.anidb.or(main);
+        if let Some(other) = t
+            .anidb
+            .filter(|a| !m.series.anidb.iter().flatten().any(|x| x == a))
+        {
+            let numbers: Vec<String> = episodes.iter().map(|n| n.describe()).collect();
+            let show = t.name.clone().unwrap_or_else(|| "another show".to_string());
+            return format!("{} of {show} (AniDB {other}, bonus)", numbers.join(", "));
+        }
         return episodes
             .iter()
             .map(|n| {

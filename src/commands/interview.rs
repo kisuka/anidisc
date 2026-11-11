@@ -9,6 +9,7 @@ use std::path::Path;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, MultiSelect, Select};
 
+use crate::data::anidb::Anime;
 use crate::data::episode::EpisodeNumber;
 use crate::data::json::{self, Kind};
 use crate::data::models::{Disc, DiscTitle, Episode, NO_EPISODE_TYPES, Release, Series};
@@ -27,6 +28,40 @@ pub struct Files<'a> {
     pub series_file: &'a Path,
 }
 
+/// Whether a disc file still has titles nobody has said anything about: the questions about it were
+/// stopped part way (Ctrl+C, Esc) or skipped. Such a disc is asked about again by `contribute -i`.
+pub fn unfinished(disc_file: &Path) -> bool {
+    let Ok(text) = std::fs::read_to_string(disc_file) else {
+        return false;
+    };
+    let Ok(disc) = json::parse_lenient::<Disc>(&text, Kind::Disc) else {
+        return false;
+    };
+    disc.titles
+        .iter()
+        .flatten()
+        .any(|t| t.kind.as_ref().is_none_or(|k| k.is_empty()))
+}
+
+/// Whether the disc is alone in its release folder, so the release is its own (and the release
+/// and box set questions apply to it).
+pub fn only_disc(disc_file: &Path) -> bool {
+    let Some(dir) = disc_file.parent() else {
+        return false;
+    };
+    std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension().is_some_and(|x| x == "json")
+                && p.file_name().is_some_and(|n| n != "release.json")
+        })
+        .count()
+        == 1
+}
+
 /// Whether to keep asking about the discs after this one.
 pub enum Next {
     Continue,
@@ -40,8 +75,11 @@ enum Stop {
     All,
 }
 
-pub fn ask(f: &Files) -> Result<Next, String> {
-    match run(f) {
+/// Looks up an AniDB record: the local cache, or a fetch unless offline.
+pub type Lookup<'a> = &'a mut dyn FnMut(i32) -> Result<Anime, String>;
+
+pub fn ask(f: &Files, lookup: Lookup) -> Result<Next, String> {
+    match run(f, lookup) {
         Ok(()) | Err(Failure::Stop(Stop::Disc)) => Ok(Next::Continue),
         Err(Failure::Stop(Stop::All)) => Ok(Next::StopAll),
         Err(Failure::Error(e)) => Err(e),
@@ -152,7 +190,7 @@ fn join_release(
     Ok(target)
 }
 
-fn run(f: &Files) -> Result<(), Failure> {
+fn run(f: &Files, lookup: Lookup) -> Result<(), Failure> {
     let theme = ColorfulTheme::default();
     let mut disc_file = f.disc_file.to_path_buf();
     let mut new_release = f.new_release;
@@ -265,13 +303,18 @@ fn run(f: &Files) -> Result<(), Failure> {
     save(&disc_file, &disc)?;
 
     let episodes = series.episodes.clone().unwrap_or_default();
-    let main = series.main_anidb();
     if episodes.is_empty() {
-        eprintln!("   (series.json has no episode list, so titles can only be given a type)");
+        eprintln!(
+            "   (series.json has no episode list; only episodes of other shows can be picked)"
+        );
     }
     for i in 0..titles {
         let title = disc.titles.as_ref().expect("counted above")[i].clone();
-        let answered = ask_title(&theme, &title, &episodes, main)?;
+        // Titles answered before (this disc was stopped part way earlier) aren't asked again.
+        if title.kind.as_ref().is_some_and(|k| !k.is_empty()) {
+            continue;
+        }
+        let answered = ask_title(&theme, &title, &episodes, &series, lookup)?;
         disc.titles.as_mut().expect("counted above")[i] = answered;
         save(&disc_file, &disc)?;
     }
@@ -279,6 +322,7 @@ fn run(f: &Files) -> Result<(), Failure> {
     Ok(())
 }
 
+const OTHER_SHOW: &str = "an episode of another show (bonus from a different AniDB entry)...";
 const KINDS: [&str; 6] = ["episode", "extra", "trailer", "menu", "notice", "other"];
 const STOP_DISC: &str = "skip the rest of this disc";
 const STOP_ALL: &str = "stop asking about all discs";
@@ -288,8 +332,11 @@ fn ask_title(
     theme: &ColorfulTheme,
     t: &DiscTitle,
     episodes: &[Episode],
-    main: Option<i32>,
+    series: &Series,
+    lookup: Lookup,
 ) -> Result<DiscTitle, Failure> {
+    let main = series.main_anidb();
+    let own = |a: i32| series.anidb.iter().flatten().any(|x| *x == a);
     let mut t = t.clone();
     let id = match (&t.title, &t.playlist) {
         (Some(n), _) => format!("Title {n}"),
@@ -333,7 +380,7 @@ fn ask_title(
             .interact_opt()?;
         return match stop {
             Some(1) => Err(Stop::All.into()),
-            Some(2) => ask_title(theme, &t, episodes, main),
+            Some(2) => ask_title(theme, &t, episodes, series, lookup),
             _ => Err(Stop::Disc.into()),
         };
     };
@@ -346,7 +393,7 @@ fn ask_title(
     if only_menu {
         t.episodes = Some(Vec::new());
     }
-    if kinds.is_empty() || only_menu || episodes.is_empty() {
+    if kinds.is_empty() || only_menu {
         return Ok(t);
     }
 
@@ -370,11 +417,18 @@ fn ask_title(
             )
         })
         .collect();
+    let guest = t.anidb.filter(|a| !own(*a));
     let picked: Vec<EpisodeNumber> = t.episodes.clone().unwrap_or_default();
-    let ticked: Vec<bool> = order
+    let mut ticked: Vec<bool> = order
         .iter()
-        .map(|e| picked.contains(&e.number) && e.anidb.or(main) == t.anidb.or(main))
+        .map(|e| {
+            guest.is_none() && picked.contains(&e.number) && e.anidb.or(main) == t.anidb.or(main)
+        })
         .collect();
+    // Last item: an episode of a different show, included on this disc as a bonus.
+    let mut labels = labels;
+    labels.push(OTHER_SHOW.to_string());
+    ticked.push(guest.is_some());
     let chosen = MultiSelect::with_theme(theme)
         .with_prompt(format!(
             "{id}: tick everything it contains, e.g. an episode plus trailers (Space ticks, Enter confirms)"
@@ -384,6 +438,14 @@ fn ask_title(
         .interact_opt()?
         .ok_or(Stop::Disc)?;
 
+    if chosen.contains(&order.len()) {
+        if chosen.len() > 1 {
+            eprintln!(
+                "   A title can only hold episodes of one AniDB entry; kept the other show's."
+            );
+        }
+        return other_show(theme, t, &id, guest, lookup);
+    }
     let chosen: Vec<&Episode> = chosen.into_iter().map(|i| order[i]).collect();
     let works: Vec<Option<i32>> = {
         let mut w: Vec<Option<i32>> = chosen.iter().map(|e| e.anidb.or(main)).collect();
@@ -424,6 +486,109 @@ fn ask_title(
 }
 
 /// A required text answer.
+/// A title holding an episode of a different show: asks for its AniDB id, then its episodes
+/// (from the show's AniDB record when it can be had, typed in otherwise) and the show's title.
+fn other_show(
+    theme: &ColorfulTheme,
+    mut t: DiscTitle,
+    id: &str,
+    current: Option<i32>,
+    lookup: Lookup,
+) -> Result<DiscTitle, Failure> {
+    let aid = text(
+        theme,
+        &format!("{id}: AniDB id of the other show (the number in anidb.net/anime/...)"),
+        &current.map(|a| a.to_string()).unwrap_or_default(),
+        |v| match v.trim().parse::<i32>() {
+            Ok(n) if n > 0 => Ok(()),
+            _ => Err("a number, e.g. 4256"),
+        },
+    )?;
+    let Ok(aid) = aid.trim().parse::<i32>() else {
+        return Ok(t);
+    };
+    let had: Vec<EpisodeNumber> = if current == Some(aid) {
+        t.episodes.clone().unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let (show, numbers) = match lookup(aid) {
+        Ok(anime) if !anime.episodes.is_empty() => {
+            let mut list = anime.episodes.clone();
+            list.sort_by_key(|e| (e.number.kind.is_some(), e.number));
+            let labels: Vec<String> = list
+                .iter()
+                .map(|e| {
+                    format!(
+                        "{:>4}  {}",
+                        e.number.to_string(),
+                        e.title.as_deref().unwrap_or("")
+                    )
+                })
+                .collect();
+            // A one-episode show (an OVA, usually) is pre-ticked.
+            let ticked: Vec<bool> = list
+                .iter()
+                .map(|e| had.contains(&e.number) || (had.is_empty() && list.len() == 1))
+                .collect();
+            let chosen = MultiSelect::with_theme(theme)
+                .with_prompt(format!(
+                    "{id}: which episodes of {}? (Space ticks, Enter confirms)",
+                    anime.title
+                ))
+                .items(&labels)
+                .defaults(&ticked)
+                .interact_opt()?
+                .ok_or(Stop::Disc)?;
+            (
+                Some(anime.title),
+                chosen.into_iter().map(|i| list[i].number).collect(),
+            )
+        }
+        found => {
+            if let Err(e) = found {
+                eprintln!("   ({e})");
+            }
+            let typed = text(
+                theme,
+                &format!("{id}: its episode numbers, e.g. 1 or 1, 2 or S1"),
+                &had.iter()
+                    .map(|n| n.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                |v| {
+                    let ok = v
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|x| !x.is_empty())
+                        .all(|x| EpisodeNumber::parse(x).is_some());
+                    if ok {
+                        Ok(())
+                    } else {
+                        Err("numbers like 1, 2, S1, T1, separated by commas")
+                    }
+                },
+            )?;
+            let numbers: Vec<EpisodeNumber> = typed
+                .split(',')
+                .filter_map(|x| EpisodeNumber::parse(x.trim()))
+                .collect();
+            (None, numbers)
+        }
+    };
+    t.anidb = Some(aid);
+    t.episodes = Some(numbers);
+    let suggested = t.name.clone().filter(|_| current == Some(aid)).or(show);
+    t.name = optional(
+        theme,
+        &format!("{id}: title of the other show"),
+        suggested.as_deref(),
+        |_| Ok(()),
+    )?
+    .filter(|n| !n.is_empty());
+    Ok(t)
+}
+
 fn text(
     theme: &ColorfulTheme,
     prompt: &str,

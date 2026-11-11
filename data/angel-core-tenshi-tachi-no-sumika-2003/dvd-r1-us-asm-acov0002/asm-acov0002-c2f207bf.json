@@ -1,0 +1,283 @@
+{
+  "contentHash": "C2F207BF75012F6D10064205896C3A1F",
+  "format": "dvd",
+  "label": "Volume 2",
+  "catalogNumber": "ASM-ACOV0002",
+  "barcode": "689076386432",
+  "volumeLabel": "20110713_031207",
+  "titles": [
+    {
+      "title": 1,
+      "duration": "0:29:10",
+      "chapters": 7,
+      "sizeBytes": 1725388800,
+      "type": "episode",
+      "episodes": [
+        2
+      ]
+    },
+    {
+      "title": 2,
+      "duration": "0:26:47",
+      "chapters": 6,
+      "sizeBytes": 1584574464,
+      "type": "episode",
+      "episodes": [
+        2
+      ]
+    },
+    {
+      "title": 3,
+      "duration": "0:24:06",
+      "chapters": 5,
+      "sizeBytes": 1426071552,
+      "type": [
+        "episode",
+        "other"
+      ],
+      "episodes": [
+        2
+      ],
+      "name": "H-Scene Only"
+    },
+    {
+      "title": 4,
+      "duration": "0:00:09",
+      "chapters": 1,
+      "sizeBytes": 3129344,
+      "type": "notice",
+      "episodes": []
+    },
+    {
+      "title": 5,
+      "duration": "0:19:29",
+      "chapters": 11,
+      "sizeBytes": 827879424,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 6,
+      "duration": "0:19:26",
+      "chapters": 10,
+      "sizeBytes": 826863616,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 7,
+      "duration": "0:21:54",
+      "chapters": 1,
+      "sizeBytes": 793903104,
+      "type": "episode",
+      "episodes": [
+        1
+      ],
+      "anidb": 4294,
+      "name": "Ecchi Soudanshitsu"
+    },
+    {
+      "title": 8,
+      "duration": "0:01:10",
+      "chapters": 14,
+      "sizeBytes": 1757184,
+      "type": "extra",
+      "episodes": [],
+      "name": "Photo Gallery"
+    },
+    {
+      "title": 9,
+      "duration": "0:02:00",
+      "chapters": 1,
+      "sizeBytes": 94814208,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 10,
+      "duration": "0:02:00",
+      "chapters": 1,
+      "sizeBytes": 94814208,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 11,
+      "duration": "0:01:47",
+      "chapters": 1,
+      "sizeBytes": 90030080,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 12,
+      "duration": "0:01:47",
+      "chapters": 1,
+      "sizeBytes": 90030080,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 13,
+      "duration": "0:01:35",
+      "chapters": 1,
+      "sizeBytes": 99952640,
+      "type": "trailer",
+      "episodes": []
+    },
+    {
+      "title": 14,
+      "duration": "0:01:35",
+      "chapters": 1,
+      "sizeBytes": 99952640,
+      "type": "trailer",
+      "episodes": []
+    }
+  ],
+  "files": [
+    {
+      "path": "VIDEO_TS/VIDEO_TS.BUP",
+      "size": 26624
+    },
+    {
+      "path": "VIDEO_TS/VIDEO_TS.IFO",
+      "size": 26624
+    },
+    {
+      "path": "VIDEO_TS/VIDEO_TS.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.BUP",
+      "size": 61440
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.IFO",
+      "size": 61440
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_0.VOB",
+      "size": 200591360
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_1.VOB",
+      "size": 1073565696
+    },
+    {
+      "path": "VIDEO_TS/VTS_01_2.VOB",
+      "size": 651823104
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_02_1.VOB",
+      "size": 3129344
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.BUP",
+      "size": 36864
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.IFO",
+      "size": 36864
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_03_1.VOB",
+      "size": 827879424
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.BUP",
+      "size": 32768
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.IFO",
+      "size": 32768
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_04_1.VOB",
+      "size": 793903104
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_05_1.VOB",
+      "size": 1757184
+    },
+    {
+      "path": "VIDEO_TS/VTS_06_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_06_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_06_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_06_1.VOB",
+      "size": 94814208
+    },
+    {
+      "path": "VIDEO_TS/VTS_07_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_07_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_07_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_07_1.VOB",
+      "size": 90030080
+    },
+    {
+      "path": "VIDEO_TS/VTS_08_0.BUP",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_08_0.IFO",
+      "size": 18432
+    },
+    {
+      "path": "VIDEO_TS/VTS_08_0.VOB",
+      "size": 116736
+    },
+    {
+      "path": "VIDEO_TS/VTS_08_1.VOB",
+      "size": 99952640
+    }
+  ]
+}
