@@ -103,7 +103,6 @@ fn run(f: &Files) -> Result<(), Failure> {
             &mut release.publisher,
             &mut release.release_date,
             &mut release.edition,
-            &mut release.barcode,
         ] {
             field.get_or_insert_with(String::new);
         }
@@ -135,7 +134,6 @@ fn run(f: &Files) -> Result<(), Failure> {
                     .ok_or("use YYYY-MM-DD, YYYY-MM or YYYY")
             },
         )?;
-        release.barcode = barcode(&theme, "Box set barcode", release.barcode.as_deref())?;
         save(f.release_file, &release)?;
     }
 
@@ -154,7 +152,7 @@ fn run(f: &Files) -> Result<(), Failure> {
     )?;
     disc.barcode = barcode(
         &theme,
-        "Barcode, if sold on its own",
+        "Barcode on the case (a box set's, if it came in one)",
         disc.barcode.as_deref(),
     )?;
     save(f.disc_file, &disc)?;

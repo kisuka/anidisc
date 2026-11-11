@@ -198,9 +198,6 @@ fn print_next_steps(data: &Path, stubs: &[Stub]) {
         eprintln!("In each new release.json:");
         eprintln!("  region       required: region code and country, e.g. R2-JP, R1-US, A-JP");
         eprintln!("  name, publisher, releaseDate (YYYY-MM-DD), edition    if you know them");
-        eprintln!(
-            "  barcode      the barcode digits of a box set (13-digit JAN/EAN or 12-digit UPC)"
-        );
         for r in &releases {
             eprintln!("    {}", show(r));
         }
@@ -212,7 +209,7 @@ fn print_next_steps(data: &Path, stubs: &[Stub]) {
     );
     eprintln!("  catalogNumber  printed on the disc or the case's spine, e.g. JDXA-57678");
     eprintln!(
-        "  barcode      if the disc was sold on its own: 13-digit JAN/EAN or 12-digit UPC, digits only"
+        "  barcode      the digits under the barcode on the case (13 for JAN/EAN, 12 for UPC); a box set's for each disc in it"
     );
     eprintln!(
         "  titles       for each: \"type\" (episode, extra, trailer, menu, other) and, for episodes,"
@@ -265,7 +262,6 @@ fn write_disc(series_dir: &Path, disc_path: &Path, scan: &ScannedDisc) -> std::i
                 publisher: blank(),
                 release_date: blank(),
                 edition: hints.edition.clone().or_else(blank),
-                barcode: blank(),
                 notes: None,
             },
         )?;

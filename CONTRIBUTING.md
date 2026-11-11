@@ -52,10 +52,9 @@ you don't know empty. Don't change anything else: it was read from the disc.
 | --- | --- | --- |
 | `release.json` | `region` | **Required.** Region code and country: `R2-JP`, `R1-US`, `A-JP` |
 | | `name`, `publisher`, `releaseDate`, `edition` | If you know them. Date as `2004-06-25`, `2004-06` or `2004` |
-| | `barcode` | A box set's barcode digits (see [below](#barcodes)) |
 | disc file | `label` | How the release names this disc: `Volume 1`, `Disc 2`. Empty for a one-disc release |
 | | `catalogNumber` | Printed on the disc or the case's spine: `JDXA-57678` |
-| | `barcode` | The disc's own barcode, if it was sold on its own |
+| | `barcode` | The digits under the barcode on the back of the case (see [below](#barcodes)) |
 | | each title's `type` | `episode`, `extra`, `trailer`, `menu` or `other` |
 | | each title's `episodes` | Which episodes it holds, numbered as in `series.json`: `[1]`, `[1, 2]`, `["S1"]` |
 
@@ -104,15 +103,13 @@ without a type are fine) and open a pull request with the new files.
   "media": "DVD",
   "publisher": "Example Media",
   "releaseDate": "2003-05",
-  "edition": "Limited Edition",
-  "barcode": "4006381333931"
+  "edition": "Limited Edition"
 }
 ```
 
 - `region` is the tag used in file names: region code and country, such as `R2-JP`, `R1-US`, `A-JP`.
 - `media` is `DVD`, `BD` or `UHD`.
-- Everything else is optional. `name` gives the release a display name; `barcode` is for a box set
-  sold as one product.
+- Everything else is optional. `name` gives the release a display name.
 
 ## Disc files
 
@@ -140,8 +137,7 @@ without a type are fine) and open a pull request with the new files.
   added or files removed, so contribute from the original disc or an untouched ISO of it, keeping
   files the pressing itself carries (`.DS_Store`, PC/Mac extras). `validate` checks that the
   listing produces the disc's `contentHash`.
-- `barcode` is the disc's own barcode when it was sold on its own, as anime DVD volumes usually
-  are. For a box set, put the box's barcode in `release.json` instead.
+- `barcode` is the barcode on the disc's case; see [Barcodes](#barcodes).
 - `pressing` tells re-pressings apart when they share a catalog number (`"2nd pressing, 2009"`).
   Each pressing with a different layout is its own disc file, in the same release folder.
 - `label` is how the disc is named in its release: `Volume 1`, `Disc 2`, `Complete Edition`,
@@ -164,7 +160,8 @@ anidisc identify <your disc> --db .
 
 ## Barcodes
 
-`barcode` is the number printed under the bars on the back of the case or its obi: 13 digits for
-a JAN (Japan) or EAN (Europe) code, 12 for a UPC (North America). Write the digits only, without
-spaces or dashes. It is optional; `validate` checks the length and the last (check) digit, so a
-typo is caught.
+Every disc file has a `barcode`: the number printed under the bars on the back of the case or its
+obi, 13 digits for a JAN (Japan) or EAN (Europe) code, 12 for a UPC (North America). Write the
+digits only, without spaces or dashes. Discs that came together in one box (a box set, a
+2-disc case) each get the box's barcode. `validate` checks the length and the last (check)
+digit, so a typo is caught. Leave it empty if you don't have the case.

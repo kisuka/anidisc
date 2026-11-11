@@ -278,10 +278,6 @@ impl Validator {
                 "{where_}/release.json: releaseDate must be YYYY, YYYY-MM or YYYY-MM-DD"
             ));
         }
-        if let Some(problem) = r.barcode.as_deref().and_then(barcode_problem) {
-            self.errors
-                .push(format!("{where_}/release.json: barcode {problem}"));
-        }
     }
 
     fn disc(&mut self, d: &Disc, s: &Series, r: &Release, where_: &str) {

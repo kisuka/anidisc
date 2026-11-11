@@ -112,7 +112,7 @@ async function renderSeries(slug, hitHash) {
   const aliases = (s.aliases ?? []).map((a) => `<span class="chip">${esc(a)}</span>`).join("");
   const releases = rec.releases.map((r) => {
     const rel = r.release;
-    const facts = [rel.media, rel.region, rel.publisher, rel.releaseDate, rel.edition, rel.barcode && `Barcode ${rel.barcode}`].filter(Boolean);
+    const facts = [rel.media, rel.region, rel.publisher, rel.releaseDate, rel.edition].filter(Boolean);
     return `
       <h2>${esc(rel.name || `${rel.media} ${rel.region}`)}</h2>
       <div class="chips">${facts.map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>

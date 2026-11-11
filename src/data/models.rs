@@ -109,13 +109,6 @@ pub struct Release {
         skip_serializing_if = "Option::is_none"
     )]
     pub edition: Option<String>,
-    /// Barcode of a box set or single-disc release: EAN-13 / JAN (13 digits) or UPC-A (12).
-    #[serde(
-        default,
-        deserialize_with = "blank",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub barcode: Option<String>,
     #[serde(
         default,
         deserialize_with = "blank",
@@ -143,8 +136,8 @@ pub struct Disc {
         skip_serializing_if = "Option::is_none"
     )]
     pub catalog_number: Option<String>,
-    /// Barcode of the disc when it was sold on its own (one volume of a series): EAN-13 / JAN
-    /// (13 digits) or UPC-A (12).
+    /// The barcode on the case the disc is sold in: EAN-13 / JAN (13 digits) or UPC-A (12).
+    /// Discs sold together in one box all carry the box's barcode.
     #[serde(
         default,
         deserialize_with = "blank",
@@ -259,7 +252,6 @@ pub mod keys {
         "publisher",
         "releaseDate",
         "edition",
-        "barcode",
         "notes",
     ];
     pub const DISC: &[&str] = &[
